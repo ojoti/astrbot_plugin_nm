@@ -1,32 +1,34 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
-# 旧版本框架通常要求插件继承自 Plugin 基类（假设存在）
-from astrbot import Plugin  # 最基础的插件基类
 
-class CallRespondPlugin(Plugin):  # 必须继承框架的 Plugin 类
-    def __init__(self):
-        super().__init__()
-        # 关键词映射
+# 旧框架最原始的插件基类（必须正确导入，否则框架找不到）
+# 若此导入失败，尝试 from astrbot.core.Plugin import Plugin
+from astrbot.Plugin import Plugin  # 框架强制要求的基类
+
+
+# 类名必须符合框架预期（通常与插件名相关，且是模块中唯一的公共类）
+class AstrbotPluginNm(Plugin):  # 类名与插件名"astrbot_plugin_nm"对应（驼峰式）
+    def __init__(self, bot):
+        super().__init__(bot)  # 必须调用父类构造函数，传入bot实例
         self.call_mapping = {
             "叫爸爸": "爸爸～",
             "叫妈妈": "妈妈～",
             "叫哥哥": "哥哥～",
             "叫姐姐": "姐姐～"
         }
-        self.cool_down = {}  # 冷却存储
+        self.cool_down = {}
         self.cool_seconds = 5
 
-    # 框架会自动调用此方法处理群消息（方法名固定）
-    def on_group_message(self, data: dict):
-        """处理群消息的方法（旧框架固定方法名）"""
-        # 过滤自身消息
-        if data.get("user_id") == self.bot.uid:  # 旧框架通常通过 self.bot.uid 获取机器人ID
-            return
+    # 框架硬编码的群消息处理方法名（必须是这个名字，否则不触发）
+    def group_message(self, event):  # 注意方法名是 group_message，而非 on_group_message
+        # event 是框架传递的原始事件对象，包含消息数据
+        user_id = event.user_id
+        group_id = event.group_id
+        msg_text = event.message.strip().lower()
 
-        # 提取信息
-        user_id = data.get("user_id")
-        group_id = data.get("group_id")
-        msg_text = data.get("message", "").strip().lower()
+        # 过滤机器人自己的消息（event.self_id 是机器人ID）
+        if user_id == event.self_id:
+            return
 
         # 冷却检查
         now = datetime.now()
@@ -37,12 +39,13 @@ class CallRespondPlugin(Plugin):  # 必须继承框架的 Plugin 类
         # 匹配关键词并回复
         for keyword, reply in self.call_mapping.items():
             if keyword.lower() in msg_text:
-                # 构建回复（原始@格式）
-                reply_text = f"@[{user_id}] {reply}"
-                # 旧框架发送群消息的方法（通过 self.bot 调用）
+                # 构建带@的回复（旧框架的艾特格式）
+                reply_text = f"@{user_id} {reply}"
+                # 通过父类传入的 bot 实例发送消息（框架固定发送方法）
                 self.bot.send_group(group_id, reply_text)
                 self.cool_down[user_id] = now
                 break
 
-# 插件注册（旧框架通过类名识别，无需额外字典）
-# 框架会自动扫描并加载继承自 Plugin 的类
+
+# 模块中必须只有这一个公共类，且类名符合框架扫描规则
+# 框架会自动实例化此类，无需额外注册代码

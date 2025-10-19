@@ -1,9 +1,21 @@
-# helloworld
+# 称呼回应插件（call_respond）
 
-AstrBot 插件模板
+AstrBot 框架下的 QQ 机器人插件，用于自动检测群聊中的称呼关键词并@触发者回应。
 
-A template plugin for AstrBot plugin feature
+## 功能特点
+- 群聊中检测到"叫爸爸""叫妈妈""叫哥哥""叫姐姐"等关键词时，自动@发送者并回复对应内容
+- 仅在群聊中生效，过滤私聊消息
+- 自带5秒冷却机制，防止同一用户高频触发刷屏
+- 不区分关键词大小写（如"叫爸爸"和"叫爸爸！"均能触发）
 
-# 支持
+## 安装方法
+1. 将插件文件夹 `call_respond` 放入 AstrBot 的 `data/plugins/` 目录
+2. 重启 AstrBot 机器人，插件会自动加载
 
-[帮助文档](https://astrbot.app)
+## 扩展说明
+如需添加更多关键词，可修改 `main.py` 中的 `call_mapping` 字典，格式为：
+```python
+{
+    "新关键词": "对应回应内容",
+    "叫爷爷": "爷爷在呢～"
+}

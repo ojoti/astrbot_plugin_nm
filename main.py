@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 
-# 旧框架最原始的插件基类（必须正确导入，否则框架找不到）
-# 若此导入失败，尝试 from astrbot.core.Plugin import Plugin
-from astrbot.Plugin import Plugin  # 框架强制要求的基类
+# 旧框架最基础的插件基类（最后尝试的导入路径）
+try:
+    from astrbot.core import BasePlugin  # 优先尝试核心模块
+except ImportError:
+    from astrbot import BasePlugin  # 备选路径
 
 
-# 类名必须符合框架预期（通常与插件名相关，且是模块中唯一的公共类）
-class AstrbotPluginNm(Plugin):  # 类名与插件名"astrbot_plugin_nm"对应（驼峰式）
-    def __init__(self, bot):
-        super().__init__(bot)  # 必须调用父类构造函数，传入bot实例
+# 框架强制要求的主类名：必须是Main，且继承自BasePlugin
+class Main(BasePlugin):
+    def __init__(self):
+        super().__init__()  # 必须调用父类初始化
         self.call_mapping = {
             "叫爸爸": "爸爸～",
             "叫妈妈": "妈妈～",
@@ -19,15 +21,17 @@ class AstrbotPluginNm(Plugin):  # 类名与插件名"astrbot_plugin_nm"对应（
         self.cool_down = {}
         self.cool_seconds = 5
 
-    # 框架硬编码的群消息处理方法名（必须是这个名字，否则不触发）
-    def group_message(self, event):  # 注意方法名是 group_message，而非 on_group_message
-        # event 是框架传递的原始事件对象，包含消息数据
-        user_id = event.user_id
-        group_id = event.group_id
-        msg_text = event.message.strip().lower()
+    # 框架固定的群消息处理方法：必须命名为handle_group
+    def handle_group(self, data):
+        """处理群消息的核心方法（框架会自动调用）"""
+        # 从原始数据中提取必要信息（旧框架数据格式）
+        user_id = data.get("user_id")
+        group_id = data.get("group_id")
+        msg_text = data.get("content", "").strip().lower()
+        bot_id = data.get("robot_id")  # 机器人自身ID
 
-        # 过滤机器人自己的消息（event.self_id 是机器人ID）
-        if user_id == event.self_id:
+        # 过滤自身消息
+        if user_id == bot_id:
             return
 
         # 冷却检查
@@ -39,13 +43,15 @@ class AstrbotPluginNm(Plugin):  # 类名与插件名"astrbot_plugin_nm"对应（
         # 匹配关键词并回复
         for keyword, reply in self.call_mapping.items():
             if keyword.lower() in msg_text:
-                # 构建带@的回复（旧框架的艾特格式）
-                reply_text = f"@{user_id} {reply}"
-                # 通过父类传入的 bot 实例发送消息（框架固定发送方法）
-                self.bot.send_group(group_id, reply_text)
+                # 构建回复（包含@）
+                reply_content = f"@{user_id} {reply}"
+                # 调用框架的发送接口（旧框架通用方法）
+                self.send_group(group_id, reply_content)
                 self.cool_down[user_id] = now
                 break
 
-
-# 模块中必须只有这一个公共类，且类名符合框架扫描规则
-# 框架会自动实例化此类，无需额外注册代码
+    # 框架要求的发送群消息方法（封装底层调用）
+    def send_group(self, group_id, content):
+        """调用框架底层发送功能"""
+        # 旧框架通常通过父类的方法发送消息
+        self.parent.send("group", group_id, content)
